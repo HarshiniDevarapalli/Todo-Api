@@ -1,6 +1,7 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const morgan = require("morgan");
+const todoRoutes = require("./routes/todoRoutes");
 
 const connectDB = require("./config/db");
 
@@ -9,6 +10,7 @@ dotenv.config();
 const app = express();
 
 app.use(express.json());
+app.use("/todos", todoRoutes);
 app.use(morgan("dev"));
 
 connectDB();
