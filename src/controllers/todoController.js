@@ -4,6 +4,12 @@ const createTodo = async (req, res) => {
   try {
     const { title, description, completed } = req.body;
 
+    if (typeof title !== "string" || title.trim() === "") {
+            return res.status(400).json({
+            message: "Title is required",
+        });
+    }
+
     const todo = await Todo.create({
       title,
       description,
@@ -12,8 +18,8 @@ const createTodo = async (req, res) => {
 
     res.status(201).json(todo);
   } catch (error) {
-    res.status(400).json({
-      message: error.message,
+    res.status(500).json({
+      message: "Failed to create todo",
     });
   }
 };
@@ -44,8 +50,14 @@ const getTodoById = async (req, res) => {
 
     res.status(200).json(todo);
   } catch (error) {
-    res.status(400).json({
+  if (error.name === "CastError") {
+    return res.status(400).json({
       message: "Invalid Todo ID",
+    });
+  }
+
+    res.status(500).json({
+    message: "Failed to fetch todo",
     });
   }
 };
@@ -54,10 +66,23 @@ const getTodoById = async (req, res) => {
 const updateTodo = async (req, res) => {
   try {
     const { id } = req.params;
+    const { title, description, completed } = req.body;
+
+    if (title !== undefined && title.trim() === "") {
+      return res.status(400).json({
+        message: "Title cannot be empty",
+      });
+    }
+
+    const updates = {};
+
+    if (title !== undefined) updates.title = title;
+    if (description !== undefined) updates.description = description;
+    if (completed !== undefined) updates.completed = completed;
 
     const todo = await Todo.findByIdAndUpdate(
       id,
-      req.body,
+      updates,
       {
         new: true,
         runValidators: true,
@@ -72,8 +97,14 @@ const updateTodo = async (req, res) => {
 
     res.status(200).json(todo);
   } catch (error) {
-    res.status(400).json({
-      message: error.message,
+  if (error.name === "CastError") {
+    return res.status(400).json({
+      message: "Invalid Todo ID",
+    });
+  }
+
+    res.status(500).json({
+    message: "Failed to update todo",
     });
   }
 };
@@ -94,8 +125,14 @@ const deleteTodo = async (req, res) => {
       message: "Todo deleted successfully",
     });
   } catch (error) {
-    res.status(400).json({
+    if (error.name === "CastError") {
+    return res.status(400).json({
       message: "Invalid Todo ID",
+    });
+    }
+
+    res.status(500).json({
+    message: "Failed to delete todo",
     });
   }
 };
