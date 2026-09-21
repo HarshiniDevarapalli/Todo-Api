@@ -1,4 +1,8 @@
-const Todo = require("../models/Todo");
+const createTodoUseCase = require("../usecases/createTodo");
+const getTodosUseCase = require("../usecases/getTodos");
+const getTodoByIdUseCase = require("../usecases/getTodoById");
+const updateTodoUseCase = require("../usecases/updateTodo");
+const deleteTodoUseCase = require("../usecases/deleteTodo");
 
 const createTodo = async (req, res) => {
   try {
@@ -10,7 +14,7 @@ const createTodo = async (req, res) => {
       });
     }
 
-    const todo = await Todo.create({
+    const todo = await createTodoUseCase({
       title,
       description,
       completed,
@@ -18,7 +22,7 @@ const createTodo = async (req, res) => {
 
     res.status(201).json(todo);
   } catch (error) {
-    if (error.name === "ValidationError" || error.name === "CastError") {
+    if (error.name === "ValidationError") {
       return res.status(400).json({
         error: "Invalid todo data",
       });
@@ -32,7 +36,7 @@ const createTodo = async (req, res) => {
 
 const getTodos = async (req, res) => {
   try {
-    const todos = await Todo.find();
+    const todos = await getTodosUseCase();
 
     res.status(200).json(todos);
   } catch (error) {
@@ -46,7 +50,7 @@ const getTodoById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const todo = await Todo.findById(id);
+    const todo = await getTodoByIdUseCase(id);
 
     if (!todo) {
       return res.status(404).json({
@@ -96,14 +100,7 @@ const updateTodo = async (req, res) => {
       updates.completed = completed;
     }
 
-    const todo = await Todo.findByIdAndUpdate(
-      id,
-      updates,
-      {
-        new: true,
-        runValidators: true,
-      }
-    );
+    const todo = await updateTodoUseCase(id, updates);
 
     if (!todo) {
       return res.status(404).json({
@@ -135,7 +132,7 @@ const deleteTodo = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const todo = await Todo.findByIdAndDelete(id);
+    const todo = await deleteTodoUseCase(id);
 
     if (!todo) {
       return res.status(404).json({
