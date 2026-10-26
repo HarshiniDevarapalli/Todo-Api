@@ -1,36 +1,55 @@
-const Todo = require("../models/Todo");
 
-const create = async (todoData) => {
-  return await Todo.create(todoData);
+const TodoRepository = require("../domain/repositories/TodoRepository");
+const Todo = require("../domain/entities/Todo");
+
+const toEntity = (doc) => {
+  if (!doc) return null;
+
+  return new Todo({
+    id: doc._id.toString(),
+    title: doc.title,
+    description: doc.description,
+    completed: doc.completed,
+    createdAt: doc.createdAt,
+    updatedAt: doc.updatedAt,
+  });
 };
 
-const findAll = async () => {
-  return await Todo.find();
-};
+class MongoTodoRepository extends TodoRepository {
+  constructor(todoModel) {
+    super();
+    this.todoModel = todoModel;
+  }
 
-const findById = async (id) => {
-  return await Todo.findById(id);
-};
+  async create(todoData) {
+    const doc = await this.todoModel.create(todoData);
+    return toEntity(doc);
+  }
 
-const update = async (id, updates) => {
-  return await Todo.findByIdAndUpdate(
-    id,
-    updates,
-    {
-      new: true,
-      runValidators: true,
-    }
-  );
-};
+  async findAll() {
+    const docs = await this.todoModel.find();
+    return docs.map(toEntity);
+  }
 
-const remove = async (id) => {
-  return await Todo.findByIdAndDelete(id);
-};
+  async findById(id) {
+    const doc = await this.todoModel.findById(id);
+    return toEntity(doc);
+  }
 
-module.exports = {
-  create,
-  findAll,
-  findById,
-  update,
-  remove,
-};
+  async update(id, updates) {
+    const doc = await this.todoModel.findByIdAndUpdate(
+      id,
+      updates,
+      { new: true, runValidators: true }
+    );
+
+    return toEntity(doc);
+  }
+
+  async remove(id) {
+    const doc = await this.todoModel.findByIdAndDelete(id);
+    return toEntity(doc);
+  }
+}
+
+module.exports = MongoTodoRepository;

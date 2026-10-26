@@ -1,19 +1,43 @@
+
 const express = require("express");
 
 const {
-  createTodo,
-  getTodos,
-  getTodoById,
-  updateTodo,
-  deleteTodo,
-} = require("../controllers/todoController");
+  validateCreateTodo,
+  validateUpdateTodo,
+  validateTodoId,
+} = require("../middleware/validateTodo");
 
-const router = express.Router();
+const createTodoRoutes = (todoController) => {
+  const router = express.Router();
 
-router.post("/", createTodo);
-router.get("/", getTodos);
-router.get("/:id", getTodoById);
-router.put("/:id", updateTodo);
-router.delete("/:id", deleteTodo);
+  router.post(
+    "/",
+    validateCreateTodo,
+    todoController.createTodo
+  );
 
-module.exports = router;
+  router.get("/", todoController.getTodos);
+
+  router.get(
+    "/:id",
+    validateTodoId,
+    todoController.getTodoById
+  ); 
+
+  router.put(
+    "/:id",
+    validateTodoId,
+    validateUpdateTodo,
+    todoController.updateTodo
+  );
+
+  router.delete(
+    "/:id",
+    validateTodoId,
+    todoController.deleteTodo
+  );
+
+  return router;
+};
+
+module.exports = createTodoRoutes;

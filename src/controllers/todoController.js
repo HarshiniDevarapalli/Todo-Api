@@ -1,165 +1,171 @@
-const createTodoUseCase = require("../usecases/createTodo");
-const getTodosUseCase = require("../usecases/getTodos");
-const getTodoByIdUseCase = require("../usecases/getTodoById");
-const updateTodoUseCase = require("../usecases/updateTodo");
-const deleteTodoUseCase = require("../usecases/deleteTodo");
 
-const createTodo = async (req, res) => {
-  try {
-    const { title, description, completed } = req.body;
+const TodoController = require("../domain/contracts/TodoController");
 
-    if (typeof title !== "string" || title.trim() === "") {
-      return res.status(400).json({
-        error: "Title is required",
-      });
-    }
+class ExpressTodoController extends TodoController {
+  constructor(todoUseCases) {
+    super();
+    this.todoUseCases = todoUseCases;
 
-    const todo = await createTodoUseCase({
-      title,
-      description,
-      completed,
-    });
-
-    res.status(201).json(todo);
-  } catch (error) {
-    if (error.name === "ValidationError") {
-      return res.status(400).json({
-        error: "Invalid todo data",
-      });
-    }
-
-    res.status(500).json({
-      error: "Failed to create todo",
-    });
+    // Preserve the correct `this` context when Express calls handlers.
+    this.createTodo = this.createTodo.bind(this);
+    this.getTodos = this.getTodos.bind(this);
+    this.getTodoById = this.getTodoById.bind(this);
+    this.updateTodo = this.updateTodo.bind(this);
+    this.deleteTodo = this.deleteTodo.bind(this);
   }
-};
 
-const getTodos = async (req, res) => {
-  try {
-    const todos = await getTodosUseCase();
+  async createTodo(req, res) {
+    try {
+      const { title, description, completed } = req.body;
 
-    res.status(200).json(todos);
-  } catch (error) {
-    res.status(500).json({
-      error: "Failed to fetch todos",
-    });
+      const todo = await this.todoUseCases.createTodo({
+        title,
+        description,
+        completed,
+      });
+
+      return res.status(201).json(todo);
+    } catch (error) {
+      if (
+        error.name === "ValidationError" ||
+        error.message === "Title is required"
+      ) {
+        return res.status(400).json({
+          error: "Invalid todo data",
+        });
+      }
+
+      console.error("Create Todo Error:", error);
+
+      return res.status(500).json({
+        error: "Failed to create todo",
+      });
+    }
   }
-};
 
-const getTodoById = async (req, res) => {
-  try {
-    const { id } = req.params;
+  async getTodos(req, res) {
+    try {
+      const todos = await this.todoUseCases.getTodos();
 
-    const todo = await getTodoByIdUseCase(id);
+      return res.status(200).json(todos);
+    } catch (error) {
+      console.error("Get Todos Error:", error);
 
-    if (!todo) {
-      return res.status(404).json({
-        error: "Todo not found",
+      return res.status(500).json({
+        error: "Failed to fetch todos",
       });
     }
-
-    res.status(200).json(todo);
-  } catch (error) {
-    if (error.name === "CastError") {
-      return res.status(400).json({
-        error: "Invalid Todo ID",
-      });
-    }
-
-    res.status(500).json({
-      error: "Failed to fetch todo",
-    });
   }
-};
 
-const updateTodo = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { title, description, completed } = req.body;
+  async getTodoById(req, res) {
+    try {
+      const { id } = req.params;
 
-    if (
-      title !== undefined &&
-      (typeof title !== "string" || title.trim() === "")
-    ) {
-      return res.status(400).json({
-        error: "Title cannot be empty",
+      const todo = await this.todoUseCases.getTodoById(id);
+
+      if (!todo) {
+        return res.status(404).json({
+          error: "Todo not found",
+        });
+      }
+
+      return res.status(200).json(todo);
+    } catch (error) {
+      if (error.name === "CastError") {
+        return res.status(400).json({
+          error: "Invalid Todo ID",
+        });
+      }
+
+      console.error("Get Todo By ID Error:", error);
+
+      return res.status(500).json({
+        error: "Failed to fetch todo",
       });
     }
-
-    const updates = {};
-
-    if (title !== undefined) {
-      updates.title = title;
-    }
-
-    if (description !== undefined) {
-      updates.description = description;
-    }
-
-    if (completed !== undefined) {
-      updates.completed = completed;
-    }
-
-    const todo = await updateTodoUseCase(id, updates);
-
-    if (!todo) {
-      return res.status(404).json({
-        error: "Todo not found",
-      });
-    }
-
-    res.status(200).json(todo);
-  } catch (error) {
-    if (error.name === "CastError") {
-      return res.status(400).json({
-        error: "Invalid Todo ID",
-      });
-    }
-
-    if (error.name === "ValidationError") {
-      return res.status(400).json({
-        error: "Invalid todo data",
-      });
-    }
-
-    res.status(500).json({
-      error: "Failed to update todo",
-    });
   }
-};
 
-const deleteTodo = async (req, res) => {
-  try {
-    const { id } = req.params;
+  async updateTodo(req, res) {
+    try {
+      const { id } = req.params;
+      const { title, description, completed } = req.body;
 
-    const todo = await deleteTodoUseCase(id);
+      const updates = {};
 
-    if (!todo) {
-      return res.status(404).json({
-        error: "Todo not found",
+      if (title !== undefined) {
+        updates.title = title;
+      }
+
+      if (description !== undefined) {
+        updates.description = description;
+      }
+
+      if (completed !== undefined) {
+        updates.completed = completed;
+      }
+
+      const todo = await this.todoUseCases.updateTodo(id, updates);
+
+      if (!todo) {
+        return res.status(404).json({
+          error: "Todo not found",
+        });
+      }
+
+      return res.status(200).json(todo);
+    } catch (error) {
+      if (error.name === "CastError") {
+        return res.status(400).json({
+          error: "Invalid Todo ID",
+        });
+      }
+
+      if (
+        error.name === "ValidationError" ||
+        error.message === "Title is required"
+      ) {
+        return res.status(400).json({
+          error: "Invalid todo data",
+        });
+      }
+
+      console.error("Update Todo Error:", error);
+
+      return res.status(500).json({
+        error: "Failed to update todo",
       });
     }
-
-    res.status(200).json({
-      message: "Todo deleted successfully",
-    });
-  } catch (error) {
-    if (error.name === "CastError") {
-      return res.status(400).json({
-        error: "Invalid Todo ID",
-      });
-    }
-
-    res.status(500).json({
-      error: "Failed to delete todo",
-    });
   }
-};
 
-module.exports = {
-  createTodo,
-  getTodos,
-  getTodoById,
-  updateTodo,
-  deleteTodo,
-};
+  async deleteTodo(req, res) {
+    try {
+      const { id } = req.params;
+
+      const todo = await this.todoUseCases.deleteTodo(id);
+
+      if (!todo) {
+        return res.status(404).json({
+          error: "Todo not found",
+        });
+      }
+
+      return res.status(200).json({
+        message: "Todo deleted successfully",
+      });
+    } catch (error) {
+      if (error.name === "CastError") {
+        return res.status(400).json({
+          error: "Invalid Todo ID",
+        });
+      }
+
+      console.error("Delete Todo Error:", error);
+
+      return res.status(500).json({
+        error: "Failed to delete todo",
+      });
+    }
+  }
+}
+
+module.exports = ExpressTodoController;

@@ -1,7 +1,8 @@
-const todoRepository = require("../repositories/todoRepository");
 
-const getTodoById = async (id) => {
-  return await todoRepository.findById(id);
+const getTodoById = (todoRepository) => {
+  return async (id) => {
+    return todoRepository.findById(id);
+  };
 };
 
 module.exports = getTodoById;
